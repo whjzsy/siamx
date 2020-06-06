@@ -1,3 +1,4 @@
+# -*- encoding: utf-8 -*-
 import os
 from glob import glob
 
@@ -30,7 +31,8 @@ class Video(object):
         self.gt_traj = gt_rect  # 追踪的真值
         self.attr = attr
         self.pred_trajs = {}  # 预测的bbox
-        self.img_names = [os.path.join(root, x) for x in img_names]  # 该视频序列下的所有帧图像名称
+        self.img_names = [os.path.join(root, x) for x in
+                          img_names]  # 该视频序列下的所有帧图像名称
         self.imgs = None
 
         if load_img:
@@ -107,15 +109,19 @@ class Video(object):
             img = cv2.polylines(img, [pts], True, color, linewidth)
             pt = (pts[0, 0, 0], pts[0, 0, 1] - 5)
             if name:
-                img = cv2.putText(img, name, pt, cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, color, 1)
+                img = cv2.putText(img, name, pt, cv2.FONT_HERSHEY_COMPLEX_SMALL,
+                                  1, color, 1)
         elif len(roi) == 4:
             if not np.isnan(roi[0]):
                 roi = list(map(int, roi))
                 color = tuple(map(int, color))
-                img = cv2.rectangle(img, (roi[0], roi[1]), (roi[0] + roi[2], roi[1] + roi[3]),
+                img = cv2.rectangle(img, (roi[0], roi[1]),
+                                    (roi[0] + roi[2], roi[1] + roi[3]),
                                     color, linewidth)
                 if name:
-                    img = cv2.putText(img, name, (roi[0], roi[1] - 5), cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, color, 1)
+                    img = cv2.putText(img, name, (roi[0], roi[1] - 5),
+                                      cv2.FONT_HERSHEY_COMPLEX_SMALL, 1, color,
+                                      1)
         return img
 
     def show(self, pred_trajs={}, linewidth=2, show_name=False):
@@ -130,7 +136,8 @@ class Video(object):
         colors = {}
         if len(pred_trajs) == 0 and len(self.pred_trajs) > 0:
             pred_trajs = self.pred_trajs
-        for i, (roi, img) in enumerate(zip(self.gt_traj, self.imgs[self.start_frame:self.end_frame + 1])):
+        for i, (roi, img) in enumerate(
+            zip(self.gt_traj, self.imgs[self.start_frame:self.end_frame + 1])):
             img = img.copy()
             # if len(img.shape) == 2:
             #     img = cv2.cvtColor(img, cv2.COLOR_GRAY2BGR)

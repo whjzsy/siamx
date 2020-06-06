@@ -1,7 +1,11 @@
+# -*- encoding: utf-8 -*-
 from .otb import OTBDataset
 
 
 class DatasetFactory(object):
+    """抽象数据集工厂
+    """
+
     @staticmethod
     def create_dataset(**kwargs):
         """构建数据集
@@ -34,4 +38,3 @@ class DatasetFactory(object):
         else:
             raise Exception("unknow dataset {}".format(kwargs['name']))
         return dataset
-

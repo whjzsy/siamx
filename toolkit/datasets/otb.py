@@ -1,3 +1,5 @@
+# -*- encoding: utf-8 -*-
+
 import json
 import os
 from glob import glob
@@ -9,7 +11,8 @@ from .video import Video
 
 
 class OTBVideo(Video):
-    def __init__(self, name, root, video_dir, init_rect, img_names, gt_rect, attr, load_img=False):
+    def __init__(self, name, root, video_dir, init_rect, img_names, gt_rect,
+                 attr, load_img=False):
         """
             Args:
                 name: video name
@@ -21,7 +24,8 @@ class OTBVideo(Video):
                 attr: attribute of video
                 load_img: 是否一次性加载所有图像，需要较大内存
         """
-        super(OTBVideo, self).__init__(name, root, video_dir, init_rect, img_names, gt_rect, attr, load_img)
+        super(OTBVideo, self).__init__(name, root, video_dir, init_rect,
+                                       img_names, gt_rect, attr, load_img)
 
     def load_tracker(self, path, tracker_names=None, store=True):
         """
@@ -61,7 +65,8 @@ class OTBVideo(Video):
                     pred_traj = [list(map(float, x.strip().split(',')))
                                  for x in f.readlines()]
                     if len(pred_traj) != len(self.gt_traj):
-                        print(name, len(pred_traj), len(self.gt_traj), self.name)
+                        print(name, len(pred_traj), len(self.gt_traj),
+                              self.name)
                     if store:
                         self.pred_trajs[name] = pred_traj
                     else:

@@ -14,6 +14,7 @@ import cv2
 from torch.utils.data import Dataset
 
 from siamban.core.config import cfg
+from siamban.datasets.point_target import PointTarget
 
 logger = logging.getLogger("global")
 
@@ -70,16 +71,8 @@ class BANDataset(Dataset):
         super(BANDataset, self).__init__()
         desired_size = (cfg.TRAIN.SEARCH_SIZE - cfg.TRAIN.EXEMPLAR_SIZE) / \
                        cfg.POINT.STRIDE + 1 + cfg.TRAIN.BASE_SIZE
+        if desired_size != cfg.TRAIN.OUTPUT_SIZE:
+            raise Exception('size not match!')
 
-
-if __name__ == '__main__':
-    name = "COCO"
-    subdata_cfg = getattr(cfg.DATASET, name)
-    sub_dataset = SubDataset(
-        name,
-        subdata_cfg.ROOT,
-        subdata_cfg.ANNO,
-        subdata_cfg.FRAME_RANGE,
-        subdata_cfg.NUM_USE,
-        0
-    )
+        # create point target
+        self.point_target = PointTarget()

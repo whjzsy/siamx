@@ -18,9 +18,12 @@ class PointTarget:
 
     def __call__(self, target, size, neg=False):
         # -1 ignore; 0 negative; 1 positive
-        # Todo ??? 为什么要乘以-1？
+        # 使用-1初始化cls, 之后负采样会设置0, 正采样会设置1
         cls = -1 * np.ones((size, size), dtype=np.int64)
         delta = np.zeros((4, size, size), dtype=np.float32)
+
+        tcx, tcy, tw, th = corner2center(target)
+        points = self.points.points
 
         def select(position, keep_num=16):
             num = position[0].shape[0]
@@ -30,9 +33,6 @@ class PointTarget:
             np.random.shuffle(slt)
             slt = slt[:keep_num]
             return tuple(p[slt] for p in position), keep_num
-
-        tcx, tcy, tw, th = corner2center(target)
-        points = self.points.points
 
         if neg:
             neg = np.where(np.square(tcx - points[0]) / np.square(tw / 4) +

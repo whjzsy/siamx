@@ -1,4 +1,4 @@
-META_ARC: "siamban_r50_l234"
+META_ARC: "siamban_r50_1234"
 
 BACKBONE:
   TYPE: "resnet50"

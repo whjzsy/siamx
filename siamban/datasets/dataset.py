@@ -76,3 +76,7 @@ class BANDataset(Dataset):
 
         # create point target
         self.point_target = PointTarget()
+        # create sub dataset
+        self.all_dataset = []
+
+        

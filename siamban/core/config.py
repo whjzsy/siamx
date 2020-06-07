@@ -27,7 +27,7 @@ cfg.TRAIN.NEG_NUM = 16
 # 正样本取样数
 cfg.TRAIN.POS_NUM = 16
 
-# 每张图片的anchor数量
+# Todo ???
 cfg.TRAIN.TOTAL_NUM = 64
 
 cfg.TRAIN.EXEMPLAR_SIZE = 127
@@ -213,6 +213,7 @@ cfg.BAN.KWARGS = CN(new_allowed=True)
 cfg.POINT = CN()
 
 # Point stride
+# 采样点的步长
 cfg.POINT.STRIDE = 8
 
 # ------------------------------------------------------------------------ #

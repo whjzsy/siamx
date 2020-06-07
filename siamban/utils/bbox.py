@@ -107,6 +107,12 @@ def rect1_2_cxy_wh(rect):
 
 def get_axis_aligned_bbox(region):
     """ convert region to (cx, cy, w, h) that represent by axis aligned box
+    Args:
+        region: 类型为numpy.ndarray
+        - 长度为8表示bbox四个顶点的x, y坐标
+        - 长度为4表示x, y, w, h
+    Returns:
+        cx, cy, w, h: 中心点坐标和bbox宽高
     """
     nv = region.size
     if nv == 8:

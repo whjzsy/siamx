@@ -18,8 +18,8 @@ class Point:
         self.points = self.generate_points(self.stride, self.size,
                                            self.image_center)
 
-    def generate_points(self, stride, size, im_c):
-        ori = im_c - size // 2 * stride
+    def generate_points(self, stride, size, image_center):
+        ori = image_center - size // 2 * stride
         x, y = np.meshgrid([ori + stride * dx for dx in np.arange(0, size)],
                            [ori + stride * dy for dy in np.arange(0, size)])
         points = np.zeros((2, size, size), dtype=np.float32)

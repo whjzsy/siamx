@@ -11,9 +11,11 @@ import os
 import sys
 
 import cv2
+import numpy as np
 from torch.utils.data import Dataset
 
 from siamban.core.config import cfg
+from siamban.datasets.augmentation import Augmentation
 from siamban.datasets.point_target import PointTarget
 
 logger = logging.getLogger("global")
@@ -24,14 +26,26 @@ if pyv[0] == '3':
     cv2.ocl.setUseOpenCL(False)
 
 
-# 训练数据集
+# 单个训练数据集
 class SubDataset(object):
     def __init__(self, name, root, anno, frame_range, num_use, start_idx):
+        """初始化单个训练数据集
+        Args:
+            name: 数据集名称
+            root: 数据路径
+            anno: 标注label
+            frame_range:
+            num_use: 采样数
+            start_idx: 在所有训练数据集里所属的起始索引
+        """
         cur_path = os.path.dirname(os.path.realpath(__file__))
+        # 数据集名称
         self.name = name
         self.root = os.path.join(cur_path, '../../', root)
         self.anno = os.path.join(cur_path, '../../', anno)
+        # Todo ???
         self.frame_range = frame_range
+        # Todo ???
         self.num_use = num_use
         self.start_idx = start_idx
 
@@ -39,7 +53,51 @@ class SubDataset(object):
         logger.info("loading " + name)
         with open(self.anno, 'r') as f:
             meta_data = json.load(f)
-            meta_data = self._filter_zero(meta_data)
+        meta_data = self._filter_zero(meta_data)
+
+        for video in list(meta_data.keys()):
+            for track in meta_data[video]:
+                frames = meta_data[video][track]
+                frames = list(map(int,
+                                  filter(lambda x: x.isdigit(), frames.keys())))
+                frames.sort()
+                meta_data[video][track]['frames'] = frames
+                if len(frames) <= 0:
+                    logger.warning("{}/{} has no frames".format(video, track))
+                    del meta_data[video][track]
+
+        for video in list(meta_data.keys()):
+            if len(meta_data[video]) <= 0:
+                logger.warning("{} has no tracks".format(video))
+                del meta_data[video]
+
+        self.labels = meta_data
+        # 总样本数
+        self.num = len(self.labels)
+        # -1表示使用所有的样本
+        self.num_use = self.num if self.num_use == -1 else self.num_use
+        self.videos = list(meta_data.keys())
+        self.path_format = '{}.{}.{}.jpg'
+
+        logger.info("{} loaded".format(self.name))
+
+        self.pick = self.shuffle()
+
+    def shuffle(self):
+        lists = list(range(self.start_idx, self.start_idx + self.num))
+        pick = []
+        while len(pick) < self.num_use:
+            np.random.shuffle(lists)
+            pick += lists
+        return pick[:self.num_use]
+
+    def log(self):
+        """输出本数据集的加载情况
+        {数据集名称} start-index {起始位置索引} select [{采样数}/{总样本数}] path_format {图片的路径}
+        """
+        logger.info("{} start-index {} select [{}/{}] path_format {}".format(
+            self.name, self.start_idx, self.num_use,
+            self.num, self.path_format))
 
     def _filter_zero(self, meta_data):
         meta_data_new = {}
@@ -77,6 +135,78 @@ class BANDataset(Dataset):
         # create point target
         self.point_target = PointTarget()
         # create sub dataset
+        # 存放了所有的训练数据集
         self.all_dataset = []
 
-        
+        # 每个训练数据集的起始索引
+        start = 0
+        # 所有数据集样本的总数
+        self.num = 0
+
+        # 加载所有数据集
+        for name in cfg.DATASET.NAMES:
+            subdata_cfg = getattr(cfg.DATASET, name)
+            sub_dataset = SubDataset(
+                name,
+                subdata_cfg.ROOT,
+                subdata_cfg.ANNO,
+                subdata_cfg.FRAME_RANGE,
+                subdata_cfg.NUM_USE,
+                start
+            )
+            start += sub_dataset.num
+            self.num += sub_dataset.num_use
+
+            sub_dataset.log()
+            self.all_dataset.append(sub_dataset)
+
+        # data augmentation
+        self.template_aug = Augmentation(
+            cfg.DATASET.TEMPLATE.SHIFT,
+            cfg.DATASET.TEMPLATE.SCALE,
+            cfg.DATASET.TEMPLATE.BLUR,
+            cfg.DATASET.TEMPLATE.FLIP,
+            cfg.DATASET.TEMPLATE.COLOR
+        )
+        self.search_aug = Augmentation(
+            cfg.DATASET.SEARCH.SHIFT,
+            cfg.DATASET.SEARCH.SCALE,
+            cfg.DATASET.SEARCH.BLUR,
+            cfg.DATASET.SEARCH.FLIP,
+            cfg.DATASET.SEARCH.COLOR
+        )
+        # 每个Epoch使用的视频序列数
+        videos_per_epoch = cfg.DATASET.VIDEOS_PER_EPOCH
+        self.num = videos_per_epoch if videos_per_epoch > 0 else self.num
+        # 采样总数为epoch * num
+        self.num *= cfg.TRAIN.EPOCH
+        self.pick = self.shuffle()
+
+    def shuffle(self):
+        pick = []
+        while len(pick) < self.num:
+            p = []
+            for sub_dataset in self.all_dataset:
+                sub_p = sub_dataset.pick
+                p += sub_p
+            np.random.shuffle(p)
+            pick += p
+
+        logger.info("shuffle done!")
+        logger.info("dataset length {}".format(self.num))
+
+        return pick[:self.num]
+
+    def __len__(self):
+        return self.num
+
+    def _find_dataset(self, index):
+        """根据索引找到所属子数据集
+        Args:
+            index: 索引
+
+        Returns: 子数据集对象, 在该子数据集中的索引
+        """
+        for dataset in self.all_dataset:
+            if dataset.start_idx + dataset.num > index:
+                return dataset, index - dataset.start_idx

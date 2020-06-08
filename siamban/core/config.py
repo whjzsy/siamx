@@ -121,9 +121,13 @@ cfg.DATASET.GRAY = 0.0
 cfg.DATASET.NAMES = ('VID', 'YOUTUBEBB', 'DET', 'COCO', 'GOT10K', 'LASOT')
 
 cfg.DATASET.VID = CN()
+# VID训练数据集路径
 cfg.DATASET.VID.ROOT = 'training_dataset/vid/crop511'
+# VID训练数据集json文件
 cfg.DATASET.VID.ANNO = 'training_dataset/vid/train.json'
+# Todo ???
 cfg.DATASET.VID.FRAME_RANGE = 100
+# 从VID中取100000个样本用作训练
 cfg.DATASET.VID.NUM_USE = 100000
 
 cfg.DATASET.YOUTUBEBB = CN()
@@ -156,7 +160,7 @@ cfg.DATASET.LASOT.ANNO = 'training_dataset/lasot/train.json'
 cfg.DATASET.LASOT.FRAME_RANGE = 100
 cfg.DATASET.LASOT.NUM_USE = 200000
 
-# 每个Epoch的视频序列数
+# 每个Epoch使用的视频序列数
 cfg.DATASET.VIDEOS_PER_EPOCH = 1000000
 
 # ------------------------------------------------------------------------ #

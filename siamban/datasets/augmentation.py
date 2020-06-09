@@ -14,13 +14,12 @@ class Augmentation:
     """
     def __init__(self, shift, scale, blur, flip, color):
         """初始化数据增强类
-        Todo
         Args:
             shift: 偏移量
             scale: 尺度缩放比例
-            blur:
-            flip:
-            color:
+            blur: 模糊
+            flip: 裁剪
+            color: 颜色
         """
         self.shift = shift
         self.scale = scale

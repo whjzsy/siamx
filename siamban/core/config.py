@@ -125,7 +125,7 @@ cfg.DATASET.VID = CN()
 cfg.DATASET.VID.ROOT = 'training_dataset/vid/crop511'
 # VID训练数据集json文件
 cfg.DATASET.VID.ANNO = 'training_dataset/vid/train.json'
-# Todo ???
+# 采样的帧范围
 cfg.DATASET.VID.FRAME_RANGE = 100
 # 从VID中取100000个样本用作训练
 cfg.DATASET.VID.NUM_USE = 100000

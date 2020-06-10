@@ -58,7 +58,7 @@ cfg.TRAIN.NUM_WORKERS = 1
 cfg.TRAIN.MOMENTUM = 0.9
 cfg.TRAIN.WEIGHT_DECAY = 0.0001
 
-# Todo 混合系数 ???
+# 计算loss时的权重系数
 cfg.TRAIN.CLS_WEIGHT = 1.0
 cfg.TRAIN.LOC_WEIGHT = 1.0
 

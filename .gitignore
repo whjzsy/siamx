@@ -6,4 +6,3 @@
 *.ipynb_checkpoints/
 test/
 training_dataset/coco/pycocotools/build/
-tools/

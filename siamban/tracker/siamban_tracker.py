@@ -4,6 +4,7 @@ import numpy as np
 
 from siamban.core.config import cfg
 from siamban.tracker.base_tracker import SiameseTracker
+from siamban.utils.bbox import corner2center
 
 
 class SiamBANTracker(SiameseTracker):
@@ -57,7 +58,6 @@ class SiamBANTracker(SiameseTracker):
         # 送入template分支
         self.model.template(z_crop)
 
-
     def track(self, img):
         """
         Args:
@@ -66,4 +66,61 @@ class SiamBANTracker(SiameseTracker):
         Returns:
             bbox(list):[x, y, width, height]
         """
-        pass
+        w_z = self.size[0] + cfg.TRACK.CONTEXT_AMOUNT * np.sum(self.size)
+        h_z = self.size[1] + cfg.TRACK.CONTEXT_AMOUNT * np.sum(self.size)
+        s_z = np.sqrt(w_z * h_z)
+        scale_z = cfg.TRACK.EXEMPLAR_SIZE / s_z
+
+        s_x = s_z * (cfg.TRACK.INSTANCE_SIZE / cfg.TRACK.EXEMPLAR_SIZE)
+        x_crop = self.get_subwindow(img, self.center_pos,
+                                    cfg.TRACK.INSTANCE_SIZE,
+                                    round(s_x), self.channel_average)
+
+        outputs = self.model.track(x_crop)
+        score = self._convert_score(outputs['cls'])
+        pred_bbox = self._convert_bbox(outputs['loc'], self.points)
+
+        def change(r):
+            return np.maximum(r, 1. / r)
+
+        def sz(w, h):
+            pad = (w + h) / 2
+            return np.sqrt((w + pad) * (h + pad))
+
+        # scale penalty
+        # Todo ???
+        s_c = change(sz(pred_bbox[2, :], pred_bbox[3, :]) /
+                     sz(self.size[0] * scale_z, self.size[1] * scale_z))
+
+        # aspect ratio penalty
+        # Todo ???
+        r_c = change((self.size[0] / self.size[1]) /
+                     (pred_bbox[2, :] / pred_bbox[3, :]))
+
+        penalty = np.exp(-(r_c * s_c - 1) * cfg.TRACK.PENALTY_K)
+        pscore = penalty * score
+
+
+
+
+    def _convert_score(self, score):
+        if self.cls_out_channels == 1:
+            score = score.permute(1, 2, 3, 0).contiguous().view(-1)
+            score = score.sigmoid().detach().cpu().numpy()
+        else:
+            score = score.permute(1, 2, 3, 0).contiguous().view(
+                self.cls_out_channels, -1).permute(1, 0)
+            score = score.softmax(dim=1).detach()[:, 1].cpu().numpy()
+        return score
+
+    def _convert_bbox(self, delta, point):
+        delta = delta.permute(1, 2, 3, 0).contiguous().view(4, -1)
+        delta = delta.detach().cpu().numpy()
+
+        delta[0, :] = point[:, 0] - delta[0, :]
+        delta[1, :] = point[:, 1] - delta[1, :]
+        delta[2, :] = point[:, 0] + delta[2, :]
+        delta[3, :] = point[:, 1] + delta[3, :]
+        delta[0, :], delta[1, :], delta[2, :], delta[3, :] = corner2center(
+            delta)
+        return delta

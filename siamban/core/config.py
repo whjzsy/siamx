@@ -178,12 +178,12 @@ cfg.BACKBONE.PRETRAINED = ''
 # Train layers
 cfg.BACKBONE.TRAIN_LAYERS = ['layer2', 'layer3', 'layer4']
 
-# Todo ???
 # Layer LR
+# 每一层的学习率
 cfg.BACKBONE.LAYERS_LR = 0.1
 
-# Todo ???
 # Switch to train layer
+# 到达TRAIN_EPOCH个epoch后, 对需要训练的层开启训练模式
 cfg.BACKBONE.TRAIN_EPOCH = 10
 
 # ------------------------------------------------------------------------ #

@@ -12,6 +12,7 @@ import torch.nn.functional as F
 from siamban.core.config import cfg
 from siamban.models.backbone import get_backbone
 from siamban.models.head import get_ban_head
+from siamban.models.iou_loss import linear_iou
 from siamban.models.neck import get_neck
 
 
@@ -74,6 +75,17 @@ class ModelBuilder(nn.Module):
         loss_pos = self.get_cls_loss(pred, label, pos_index)
         loss_neg = self.get_cls_loss(pred, label, neg_index)
         return (loss_pos + loss_neg) / 2
+
+    def select_iou_loss(self, pred_loc, label_loc, label_cls):
+        label_cls = label_cls.reshape(-1)
+        pos = label_cls.data.eq(1).nonzero().squeeze().cuda()
+
+        pred_loc = pred_loc.permute(0, 2, 3, 1).reshape(-1, 4)
+        pred_loc = torch.index_select(pred_loc, 0, pos)
+
+        label_loc = label_loc.permute(0, 2, 3, 1).reshape(-1, 4)
+        label_loc = torch.index_select(label_loc, 0, pos)
+        return linear_iou(pred_loc, label_loc)
 
     def weight_l1_loss(self, pred_loc, label_loc, loss_weight):
         if cfg.BAN.BAN:

@@ -11,7 +11,8 @@ from __future__ import unicode_literals
 from yacs.config import CfgNode as CN
 
 cfg = CN()
-cfg.META_ARC = "siamban_r50_1234"
+# cfg.META_ARC = "siamban_r50_1234"
+cfg.META_ARC = "train_siamban_demo"
 
 # 开启CUDA加速
 cfg.CUDA = True

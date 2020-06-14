@@ -119,70 +119,6 @@ def build_opt_lr(model, current_epoch=0):
     return optimizer, lr_scheduler
 
 
-def main():
-    rank, world_size = dist_init()
-    logger.info("init done")
-
-    # load cfg
-    cfg.merge_from_file(args.cfg)
-
-    # rank表示进程序号, 用于进程间通讯, 表征进程优先级
-    # rank=0的主机为master节点
-    if rank == 0:
-        if not os.path.exists(cfg.TRAIN.LOG_DIR):
-            os.makedirs(cfg.TRAIN.LOG_DIR)
-        init_log('global', logging.INFO)
-        if os.path.isdir(cfg.TRAIN.LOG_DIR):
-            add_file_handler('global',
-                             os.path.join(cfg.TRAIN.LOG_DIR, 'logs.txt'),
-                             logging.INFO)
-
-        logger.info(f"Version Information: \n{commit()}\n")
-        logger.info(f"config \n{json.dumps(cfg, indent=4)}")
-
-    # create model
-    model = ModelBuilder().cuda().train()
-
-    # load pretrained backbone weights
-    if cfg.BACKBONE.PRETRAINED:
-        cur_path = os.path.dirname(os.path.realpath(__file__))
-        backbone_path = os.path.join(cur_path, '../', cfg.BACKBONE.PRETRAINED)
-        load_pretrain(model.backbone, backbone_path)
-
-    # create tensorboard writer
-    if rank == 0 and cfg.TRAIN.LOG_DIR:
-        tb_writer = SummaryWriter(cfg.TRAIN.LOG_DIR)
-    else:
-        tb_writer = None
-
-    # build dataset loader
-    train_loader = build_data_loader()
-
-    # build optimizer and lr_scheduler
-    optimizer, lr_scheduler = build_opt_lr(model,
-                                           cfg.TRAIN.START_EPOCH)
-
-    # resume training
-    if cfg.TRAIN.RESUME:
-        logger.info(f"resume from {cfg.TRAIN.RESUME}")
-        assert os.path.isfile(cfg.TRAIN.RESUME), \
-            f'{cfg.TRAIN.RESUME} is not a valid file.'
-        model, optimizer, cfg.TRAIN.START_EPOCH = \
-            restore_from(model, optimizer, cfg.TRAIN.RESUME)
-    # load pretrain
-    elif cfg.TRAIN.PRETRAINED:
-        load_pretrain(model, cfg.TRAIN.PRETRAINED)
-
-    # 分布式模型
-    dist_model = DistModule(model)
-
-    logger.info(lr_scheduler)
-    logger.info("model prepare done")
-
-    # start training
-    train(train_loader, dist_model, optimizer, lr_scheduler, tb_writer)
-
-
 def train(train_loader, model, optimizer, lr_scheduler, tb_writer):
     # 只在master节点添加tensorboard绘图
     cur_lr = lr_scheduler.get_cur_lr()
@@ -229,7 +165,7 @@ def train(train_loader, model, optimizer, lr_scheduler, tb_writer):
 
             lr_scheduler.step(epoch)
             cur_lr = lr_scheduler.get_cur_lr()
-            logger.info('epoch: {}'.format(epoch + 1))
+            logger.info(f'epoch: {epoch + 1}')
 
         tb_idx = idx + start_epoch * num_per_epoch
         if idx % num_per_epoch == 0 and idx != 0:
@@ -244,6 +180,7 @@ def train(train_loader, model, optimizer, lr_scheduler, tb_writer):
             tb_writer.add_scalar('time/data', data_time, tb_idx)
 
         outputs = model(data)
+
         loss = outputs['total_loss']
 
         if is_valid_number(loss.data.item()):
@@ -327,6 +264,72 @@ def log_grads(model, tb_writer, tb_index):
     tb_writer.add_scalar('grad/tot', tot_norm, tb_index)
     tb_writer.add_scalar('grad/feature', feature_norm, tb_index)
     tb_writer.add_scalar('grad/head', head_norm, tb_index)
+
+
+def main():
+    rank, world_size = dist_init()
+    logger.info("init done")
+
+    # load cfg
+    cfg.merge_from_file(args.cfg)
+
+    # rank表示进程序号, 用于进程间通讯, 表征进程优先级
+    # rank=0的主机为master节点
+    if rank == 0:
+        if not os.path.exists(cfg.TRAIN.LOG_DIR):
+            os.makedirs(cfg.TRAIN.LOG_DIR)
+        init_log('global', logging.INFO)
+        if os.path.isdir(cfg.TRAIN.LOG_DIR):
+            add_file_handler('global',
+                             os.path.join(cfg.TRAIN.LOG_DIR, 'logs.txt'),
+                             logging.INFO)
+
+        logger.info(f"Version Information: \n{commit()}\n")
+        logger.info(f"config: \n{json.dumps(cfg, indent=4)}")
+
+    # create model
+    model = ModelBuilder().cuda().train()
+
+    logger.info(f"model: {model}")
+
+    # load pretrained backbone weights
+    if cfg.BACKBONE.PRETRAINED:
+        cur_path = os.path.dirname(os.path.realpath(__file__))
+        backbone_path = os.path.join(cur_path, '../', cfg.BACKBONE.PRETRAINED)
+        load_pretrain(model.backbone, backbone_path)
+
+    # create tensorboard writer
+    if rank == 0 and cfg.TRAIN.LOG_DIR:
+        tb_writer = SummaryWriter(cfg.TRAIN.LOG_DIR)
+    else:
+        tb_writer = None
+
+    # build dataset loader
+    train_loader = build_data_loader()
+
+    # build optimizer and lr_scheduler
+    optimizer, lr_scheduler = build_opt_lr(model,
+                                           cfg.TRAIN.START_EPOCH)
+
+    # resume training
+    if cfg.TRAIN.RESUME:
+        logger.info(f"resume from {cfg.TRAIN.RESUME}")
+        assert os.path.isfile(cfg.TRAIN.RESUME), \
+            f'{cfg.TRAIN.RESUME} is not a valid file.'
+        model, optimizer, cfg.TRAIN.START_EPOCH = \
+            restore_from(model, optimizer, cfg.TRAIN.RESUME)
+    # load pretrain
+    elif cfg.TRAIN.PRETRAINED:
+        load_pretrain(model, cfg.TRAIN.PRETRAINED)
+
+    # 分布式模型
+    dist_model = DistModule(model)
+
+    logger.info(lr_scheduler)
+    logger.info("model prepare done")
+
+    # start training
+    train(train_loader, dist_model, optimizer, lr_scheduler, tb_writer)
 
 
 if __name__ == '__main__':

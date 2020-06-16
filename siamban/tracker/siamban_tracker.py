@@ -100,8 +100,38 @@ class SiamBANTracker(SiameseTracker):
         penalty = np.exp(-(r_c * s_c - 1) * cfg.TRACK.PENALTY_K)
         pscore = penalty * score
 
+        # window penalty
+        pscore = pscore * (1 - cfg.TRACK.WINDOW_INFLUENCE) + \
+                 self.window * cfg.TRACK.WINDOW_INFLUENCE
+        best_idx = np.argmax(pscore)
+        bbox = pred_bbox[:, best_idx] / scale_z
+        lr = penalty[best_idx] * score[best_idx] * cfg.TRACK.LR
 
+        cx = bbox[0] + self.center_pos[0]
+        cy = bbox[1] + self.center_pos[1]
 
+        # smooth bbox
+        width = self.size[0] * (1 - lr) + bbox[2] * lr
+        height = self.size[1] * (1 - lr) + bbox[3] * lr
+
+        # clip boundary
+        cx, cy, width, height = self._bbox_clip(cx, cy, width,
+                                                height, img.shape[:2])
+
+        # udpate state
+        self.center_pos = np.array([cx, cy])
+        self.size = np.array([width, height])
+
+        # 转换为左上角点(x, y, w, h)
+        bbox = [cx - width / 2,
+                cy - height / 2,
+                width,
+                height]
+        best_score = score[best_idx]
+        return {
+            'bbox': bbox,
+            'best_score': best_score
+        }
 
     def _convert_score(self, score):
         if self.cls_out_channels == 1:

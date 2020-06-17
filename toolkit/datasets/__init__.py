@@ -1,5 +1,6 @@
 # -*- encoding: utf-8 -*-
 from .otb import OTBDataset
+from .uav import UAVDataset
 
 
 class DatasetFactory(object):
@@ -23,8 +24,8 @@ class DatasetFactory(object):
             dataset = OTBDataset(**kwargs)
         # elif 'LaSOT' == name:
         #     dataset = LaSOTDataset(**kwargs)
-        # elif 'UAV' in name:
-        #     dataset = UAVDataset(**kwargs)
+        elif 'UAV' in name:
+            dataset = UAVDataset(**kwargs)
         # elif 'NFS' in name:
         #     dataset = NFSDataset(**kwargs)
         # elif 'VOT2018' == name or 'VOT2016' == name or 'VOT2019' == name:
